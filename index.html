@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17202a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Hidden Yard">
+<link rel="manifest" href="manifest.webmanifest">
+<title>The Hidden Yard — Accounts</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f6f8;color:#17202a}
+.app{max-width:520px;margin:auto;min-height:100vh;background:#fff}.top{padding:24px 20px 16px;border-bottom:1px solid #eee;position:sticky;top:0;background:#fff;z-index:3}
+.brand{font-size:20px;font-weight:800}.sub{color:#707780;font-size:13px;margin-top:4px}
+.screen{padding:22px 20px 115px}.card{background:#f7f8fa;border-radius:18px;padding:18px;margin:14px 0}
+h1{font-size:27px;margin:4px 0 8px}h2{font-size:20px}.muted{color:#717981}.amount{font-size:40px;font-weight:800;width:100%;border:0;background:transparent;outline:0}
+label{display:block;font-size:13px;font-weight:700;margin:16px 0 7px;color:#555}
+input,select{width:100%;padding:14px;border:1px solid #dfe3e7;border-radius:12px;font-size:16px;background:#fff}
+button{border:0;border-radius:13px;padding:14px 16px;font-size:16px;font-weight:700;cursor:pointer}
+.primary{background:#17202a;color:#fff;width:100%;margin-top:18px}.secondary{background:#eef0f3;color:#17202a}.danger{background:#fff0f0;color:#b42318}
+.row{display:flex;gap:10px}.row>*{flex:1}.pill{display:inline-block;background:#eef0f3;padding:7px 10px;border-radius:20px;font-size:12px}
+.big{font-size:25px;font-weight:800}.green{color:#138a4a}.red{color:#c93434}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);max-width:520px;width:100%;display:flex;background:#fff;border-top:1px solid #ddd;padding:8px 10px calc(8px + env(safe-area-inset-bottom));z-index:4}
+.nav button{flex:1;background:white;color:#69717a;font-size:12px}.nav button.active{color:#17202a;font-weight:800}
+.expense{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:13px;margin:9px 0;display:flex;justify-content:space-between}
+.hidden{display:none}.center{text-align:center}.success{padding:22px;background:#ecfdf3;border-radius:18px}.metric{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #e8eaed}
+.install{font-size:13px;background:#f0f6ff;border-radius:14px;padding:12px;margin-bottom:15px}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="top"><div class="brand">The Hidden Yard</div><div class="sub">Daily Café Accounts</div></div>
+<main id="appScreen" class="screen"></main>
+<div class="nav"><button onclick="showHome()" id="navHome">➕<br>New Day</button><button onclick="showHistory()" id="navHistory">📊<br>History</button></div>
+</div>
+<script>
+const KEY="hiddenYardAccountsV2";let db=JSON.parse(localStorage.getItem(KEY)||"[]");
+let day={date:new Date().toISOString().slice(0,10),sales:0,cash:0,upi:0,card:0,other:0,expenses:[]};
+const cats=["Raw Materials","Milk & Dairy","Vegetables & Fruits","Bakery / Ingredients","Beverages","Gas","Electricity","Staff / Wages","Rent","Packaging","Transport","Maintenance","Cleaning","Marketing","Other"];
+const modes=["Cash","UPI","Card","Bank Transfer","Other"];
+const money=n=>"₹"+Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:2});
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
+function nav(a){document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));document.getElementById(a).classList.add("active")}
+function showHome(){nav("navHome");day={date:new Date().toISOString().slice(0,10),sales:0,cash:0,upi:0,card:0,other:0,expenses:[]};renderSales()}
+function renderSales(){appScreen.innerHTML=`<div class="pill">${new Date().toLocaleDateString("en-IN",{weekday:"short",day:"2-digit",month:"short",year:"numeric"})}</div><h1>What were today's total sales?</h1><p class="muted">Enter the EOD sales amount.</p><div class="card"><input id="sales" class="amount" type="number" inputmode="decimal" placeholder="₹ 0" autofocus></div><button class="primary" onclick="salesNext()">Continue</button>`}
+function salesNext(){let v=Number(document.getElementById("sales").value);if(v<0||isNaN(v))return alert("Please enter a valid amount.");day.sales=v;renderPayment()}
+function renderPayment(){appScreen.innerHTML=`<h1>Sales breakup</h1><p class="muted">How was today's sales received?</p>${["cash","upi","card","other"].map(x=>`<label>${x.toUpperCase()}</label><input id="${x}" type="number" inputmode="decimal" placeholder="₹ 0">`).join("")}<div class="card"><div class="metric"><span>Entered</span><b id="entered">₹0</b></div><div class="metric"><span>Difference</span><b id="diff">${money(day.sales)}</b></div></div><button class="primary" onclick="paymentNext()">Continue</button>`;["cash","upi","card","other"].forEach(id=>document.getElementById(id).addEventListener("input",updatePay))}
+function updatePay(){let t=["cash","upi","card","other"].reduce((a,id)=>a+Number(document.getElementById(id).value||0),0);document.getElementById("entered").textContent=money(t);document.getElementById("diff").textContent=money(day.sales-t)}
+function paymentNext(){["cash","upi","card","other"].forEach(id=>day[id]=Number(document.getElementById(id).value||0));let t=day.cash+day.upi+day.card+day.other;if(Math.abs(t-day.sales)>0.01&&!confirm("Payment breakup doesn't equal total sales. Continue anyway?"))return;renderExpense()}
+function expenseHTML(){return day.expenses.length?day.expenses.map(e=>`<div class="expense"><div><b>${esc(e.category)}</b><br><span class="muted">${esc(e.description||"")}</span><br><span class="pill">${esc(e.mode)}</span></div><b>${money(e.amount)}</b></div>`).join(""):`<div class="card center muted">No expenses added yet.</div>`}
+function renderExpense(){appScreen.innerHTML=`<h1>Add expenses</h1><p class="muted">Record each expense separately.</p><div id="expenseList">${expenseHTML()}</div><button class="secondary" onclick="addExpense()">＋ Add Expense</button><button class="primary" onclick="finishDay()">Finish EOD</button>`}
+function addExpense(){appScreen.innerHTML=`<h1>New expense</h1><label>Category</label><select id="ecat">${cats.map(x=>`<option>${x}</option>`).join("")}</select><label>Amount</label><input id="eamount" type="number" inputmode="decimal" placeholder="₹ 0"><label>Payment mode</label><select id="emode">${modes.map(x=>`<option>${x}</option>`).join("")}</select><label>Description</label><input id="edesc" placeholder="e.g. Milk purchase"><button class="primary" onclick="saveExpense()">Save & Add Another</button><button class="secondary" style="width:100%;margin-top:10px" onclick="renderExpense()">Done</button>`}
+function saveExpense(){let amount=Number(document.getElementById("eamount").value);if(!amount||amount<0)return alert("Please enter the expense amount.");day.expenses.push({category:document.getElementById("ecat").value,amount,mode:document.getElementById("emode").value,description:document.getElementById("edesc").value});renderExpense()}
+function finishDay(){if(!confirm("Close today's accounts?"))return;let exp=day.expenses.reduce((a,e)=>a+e.amount,0);db.push({...day,totalExpense:exp,net:day.sales-exp,closedAt:new Date().toISOString()});save();appScreen.innerHTML=`<div class="success center"><div style="font-size:40px">✓</div><h1>Day Closed</h1><p class="muted">Today's accounts are saved on this device.</p></div><div class="card"><div class="metric"><span>Sales</span><b>${money(day.sales)}</b></div><div class="metric"><span>Expenses</span><b>${money(exp)}</b></div><div class="metric"><span>Net</span><b class="green">${money(day.sales-exp)}</b></div></div><button class="primary" onclick="showHistory()">View History</button>`}
+function showHistory(){nav("navHistory");let s=db.reduce((a,x)=>a+x.sales,0),e=db.reduce((a,x)=>a+x.totalExpense,0);appScreen.innerHTML=`<h1>Accounts</h1><div class="card"><div class="metric"><span>Total Sales</span><b>${money(s)}</b></div><div class="metric"><span>Total Expenses</span><b>${money(e)}</b></div><div class="metric"><span>Net</span><b class="green">${money(s-e)}</b></div></div><h2>Daily history</h2>${db.length?db.slice().reverse().map(x=>`<div class="expense" onclick="viewDay('${x.date}')"><div><b>${new Date(x.date+"T00:00:00").toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"})}</b><br><span class="muted">${x.expenses.length} expenses</span></div><div style="text-align:right"><b>${money(x.sales)}</b><br><span class="${x.net>=0?'green':'red'}">${money(x.net)}</span></div></div>`).join(""):`<div class="card center muted">No closed days yet.</div>`}<button class="danger" style="width:100%;margin-top:20px" onclick="clearData()">Clear all saved data</button>`}
+function viewDay(date){let x=db.find(d=>d.date===date);if(!x)return;appScreen.innerHTML=`<h1>${new Date(date+"T00:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})}</h1><div class="card"><div class="metric"><span>Sales</span><b>${money(x.sales)}</b></div><div class="metric"><span>Cash</span><b>${money(x.cash)}</b></div><div class="metric"><span>UPI</span><b>${money(x.upi)}</b></div><div class="metric"><span>Card</span><b>${money(x.card)}</b></div><div class="metric"><span>Expenses</span><b>${money(x.totalExpense)}</b></div><div class="metric"><span>Net</span><b class="green">${money(x.net)}</b></div></div><h2>Expenses</h2>${x.expenses.map(e=>`<div class="expense"><div><b>${esc(e.category)}</b><br><span class="muted">${esc(e.description||"")} · ${esc(e.mode)}</span></div><b>${money(e.amount)}</b></div>`).join("")}<button class="secondary" style="width:100%;margin-top:12px" onclick="showHistory()">Back</button>`}
+function clearData(){if(confirm("Delete all saved accounts from this device?")){db=[];save();showHistory()}}
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+showHome();
+</script>
+</body></html>
